@@ -48,21 +48,27 @@ import cognitivabrasil.obaa.Technical.SupportedPlatform;
 import cognitivabrasil.obaa.Technical.Technical;
 import cognitivabrasil.obaa.Technical.Type;
 import com.cognitivabrasil.cognix.entities.Document;
+import com.cognitivabrasil.cognix.entities.User;
 import com.cognitivabrasil.cognix.entities.Files;
 import com.cognitivabrasil.cognix.entities.dto.DocumentDto;
 import com.cognitivabrasil.cognix.entities.dto.DocumentTinyDto;
 import com.cognitivabrasil.cognix.entities.dto.MessageDto;
 import com.cognitivabrasil.cognix.services.DocumentService;
+import com.cognitivabrasil.cognix.services.UserService;
 import com.cognitivabrasil.cognix.util.Config;
 import java.io.File;
 import java.io.IOException;
+import java.security.Principal;
 import java.text.DateFormat;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Date;
+import java.util.Enumeration;
 import java.util.List;
+import java.util.HashMap;
 import java.util.stream.Collectors;
 import javax.persistence.EntityNotFoundException;
+import javax.servlet.http.HttpServletRequest;
 import org.joda.time.DateTime;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -98,6 +104,9 @@ public class DocumentsController {
 
     @Autowired
     private DocumentService docService;
+
+    @Autowired
+    private UserService userService;
 
     @Autowired
     private Config config;
@@ -283,10 +292,7 @@ public class DocumentsController {
 
         meta.setLanguage(new Language("pt-BR"));
 
-        // logged user data
-        //TODO: PEGAR AQUI O USUÁRIO LOGADO.
-        //String userName = currentUser.getUsername();
-        String userName = "usuario@logado.com";
+        String userName = d.getOwner().getUsername();
         Contribute c = new Contribute();
 
         // Quando fizer o cadastro dos usuários do sistema cuidar para que possa por os dados do vcard
@@ -656,13 +662,15 @@ public class DocumentsController {
      * @return
      */
     @PostMapping(value = "/new")
-    public HttpEntity<DocumentDto> newShow() {
-
+    public HttpEntity<DocumentDto> newShow(@RequestBody HashMap<String,String> filters) {
+                        
         Document d = new Document();
         d.setCreated(new DateTime());
         //TODO: Precisa pegar aqui o email do usuário logado.
-//        d.setOwner(UsersController.getCurrentUser());
-
+        // d.setOwner(UsersController.getCurrentUser());
+        if(filters.containsKey("login")) {
+            d.setOwner(userService.get(filters.get("login")));
+        }
         //o documento precisa ser salvo para gerar um id da base
         docService.save(d);
 
@@ -672,6 +680,9 @@ public class DocumentsController {
         OBAA obaa = new OBAA();
 
         obaa.setGeneral(new General());
+        obaa.setLifeCycle(new LifeCycle());
+        obaa.setEducational(new Educational());
+        obaa.setRights(new Rights());
 
         List<Identifier> identifiers = new ArrayList<>();
         Identifier i = new Identifier();
@@ -690,7 +701,7 @@ public class DocumentsController {
     public HttpEntity<DocumentDto> newClassPlan() {
 
         //inicializa com o new basico
-        HttpEntity<DocumentDto> httpEntityDocDto = newShow();
+        HttpEntity<DocumentDto> httpEntityDocDto = newShow(null);
         DocumentDto docDto = httpEntityDocDto.getBody();
 
 //        metadados para planos de aula
