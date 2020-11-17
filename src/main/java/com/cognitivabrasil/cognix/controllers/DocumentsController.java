@@ -56,6 +56,9 @@ import com.cognitivabrasil.cognix.entities.dto.MessageDto;
 import com.cognitivabrasil.cognix.services.DocumentService;
 import com.cognitivabrasil.cognix.services.UserService;
 import com.cognitivabrasil.cognix.util.Config;
+import com.cognitivabrasil.cognix.web.security.SecurityUser;
+import com.cognitivabrasil.cognix.web.security.TokenHandler;
+import com.cognitivabrasil.cognix.web.security.TokenAuthenticationService;
 import java.io.File;
 import java.io.IOException;
 import java.security.Principal;
@@ -107,6 +110,9 @@ public class DocumentsController {
 
     @Autowired
     private UserService userService;
+
+    @Autowired
+    private TokenHandler tokenHandler;
 
     @Autowired
     private Config config;
@@ -662,43 +668,55 @@ public class DocumentsController {
      * @return
      */
     @PostMapping(value = "/new")
-    public HttpEntity<DocumentDto> newShow(@RequestBody HashMap<String,String> filters) {
-                        
+    public HttpEntity<DocumentDto> newShow(HttpServletRequest request) {
+        MessageDto msg;
         Document d = new Document();
-        d.setCreated(new DateTime());
-        //TODO: Precisa pegar aqui o email do usuário logado.
-        // d.setOwner(UsersController.getCurrentUser());
-        if(filters.containsKey("login")) {
-            d.setOwner(userService.get(filters.get("login")));
+        try{                
+            d.setCreated(new DateTime());
+
+            final String token = request.getHeader(TokenAuthenticationService.AUTH_HEADER_NAME);
+            final SecurityUser user = tokenHandler.parseUserFromToken(token);
+
+            d.setOwner(userService.get(user.getUsername()));
+
+            //o documento precisa ser salvo para gerar um id da base
+            docService.save(d);
+
+            String uri = createUri(d);
+            d.setObaaEntry(uri);
+            docService.save(d);
+            OBAA obaa = new OBAA();
+
+            obaa.setGeneral(new General());
+            obaa.setLifeCycle(new LifeCycle());
+            obaa.setEducational(new Educational());
+            obaa.setRights(new Rights());
+
+            List<Identifier> identifiers = new ArrayList<>();
+            Identifier i = new Identifier();
+            i.setEntry(uri);
+            i.setCatalog("URI");
+
+            identifiers.add(i);
+            obaa.getGeneral().setIdentifiers(identifiers);
+
+            d.setMetadata(obaa);
         }
-        //o documento precisa ser salvo para gerar um id da base
-        docService.save(d);
-
-        String uri = createUri(d);
-        d.setObaaEntry(uri);
-        docService.save(d);
-        OBAA obaa = new OBAA();
-
-        obaa.setGeneral(new General());
-        obaa.setLifeCycle(new LifeCycle());
-        obaa.setEducational(new Educational());
-        obaa.setRights(new Rights());
-
-        List<Identifier> identifiers = new ArrayList<>();
-        Identifier i = new Identifier();
-        i.setEntry(uri);
-        i.setCatalog("URI");
-
-        identifiers.add(i);
-        obaa.getGeneral().setIdentifiers(identifiers);
-
-        d.setMetadata(obaa);
-
+        catch(io.jsonwebtoken.SignatureException e){
+            log.error("A assinatura é inválida!");
+            msg = new MessageDto(MessageDto.ERROR, "A assinatura não foi encontrada através do token.");
+            return new ResponseEntity(msg, HttpStatus.INTERNAL_SERVER_ERROR);
+        }
+        catch(io.jsonwebtoken.MalformedJwtException e){
+            log.error("O token é inválido!");
+            msg = new MessageDto(MessageDto.ERROR, "O usuário não foi encontrado através do token.");
+            return new ResponseEntity(msg, HttpStatus.INTERNAL_SERVER_ERROR);
+        }
         return new ResponseEntity(new DocumentDto(d), HttpStatus.OK);
     }
 
     @GetMapping(value = "/model/classPlan")
-    public HttpEntity<DocumentDto> newClassPlan() {
+    private HttpEntity<DocumentDto> newClassPlan() {
 
         //inicializa com o new basico
         HttpEntity<DocumentDto> httpEntityDocDto = newShow(null);
