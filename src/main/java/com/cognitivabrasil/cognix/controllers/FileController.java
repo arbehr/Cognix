@@ -16,6 +16,9 @@ import com.cognitivabrasil.cognix.entities.dto.MessageDto;
 import com.cognitivabrasil.cognix.services.DocumentService;
 import com.cognitivabrasil.cognix.services.FileService;
 import com.cognitivabrasil.cognix.util.Config;
+import com.cognitivabrasil.cognix.web.security.SecurityUser;
+import com.cognitivabrasil.cognix.web.security.TokenHandler;
+import com.cognitivabrasil.cognix.web.security.TokenAuthenticationService;
 import java.io.BufferedOutputStream;
 import java.io.File;
 import java.io.FileInputStream;
@@ -65,6 +68,8 @@ public class FileController {
     private FileService fileService;
     @Autowired
     private DocumentService documentsService;
+    @Autowired
+    private TokenHandler tokenHandler;
     private Files file = null;
     private int chunk;
     private int chunks;
@@ -102,7 +107,7 @@ public class FileController {
     }
 
     @DeleteMapping(value = "/{id}")
-    public HttpEntity<MessageDto> delete(@PathVariable("id") Integer id) {
+    private HttpEntity<MessageDto> delete(@PathVariable("id") Integer id) {
 
         Files f = fileService.get(id);
 
@@ -131,12 +136,13 @@ public class FileController {
     }
 
     @PostMapping(value = "/uploadFile")
-    public HttpEntity<String> upload(@RequestParam("file") MultipartFile multipartFile, HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException, org.apache.commons.fileupload.FileUploadException {
+    public HttpEntity<String> upload(@RequestParam("file") MultipartFile multipartFile, HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException, org.apache.commons.fileupload.FileUploadException, Exception {
+        
         if (file == null) {
             file = new Files();
             file.setSizeInBytes(0L);
         }
-
+        MessageDto msg;
         Integer docId = null;
         String docPath = null;
         String responseString = RESP_SUCCESS;
@@ -144,6 +150,18 @@ public class FileController {
 
         if (isMultipart) {
             try {
+                if(request.getHeader(TokenAuthenticationService.AUTH_HEADER_NAME) == null){
+                    responseString = RESP_ERROR;
+                    LOG.error("Usuário sem token!");
+                    file = null;
+                    throw new Exception("Usuário sem token!");
+                }                
+        
+                final String token = request.getHeader(TokenAuthenticationService.AUTH_HEADER_NAME);
+                final SecurityUser user = tokenHandler.parseUserFromToken(token);
+
+                LOG.info("Carregando arquivo para o usuário: " + user.getUsername());
+                
                 if (!multipartFile.isEmpty()) {
                     // InputStream input = multipartFile.getInputStream();
                     Enumeration<String> parameterNames = request.getParameterNames();
@@ -226,6 +244,16 @@ public class FileController {
                     fileService.save(file);
                     file = null;
                 }
+            } catch(io.jsonwebtoken.SignatureException e){
+                responseString = RESP_ERROR;
+                LOG.error("A assinatura é inválida!");
+                file = null;
+                throw e;
+            } catch(io.jsonwebtoken.MalformedJwtException e){
+                responseString = RESP_ERROR;
+                LOG.error("O token é inválido!");
+                file = null;
+                throw e;
             } catch (org.apache.commons.fileupload.FileUploadException | IOException | NumberFormatException e) {
                 responseString = RESP_ERROR;
                 LOG.error("Erro ao salvar o arquivo", e);

@@ -58,7 +58,7 @@ public class UsersController {
      * @return
      */
     @GetMapping
-    public HttpEntity<UserDto> list() {
+    private HttpEntity<UserDto> list() {
         List<User> l = userService.getAll();
         List<UserDto> usersDto = l.stream().map(UserDto::new).collect(toList());
 
@@ -73,7 +73,7 @@ public class UsersController {
      * @return
      */
     @PostMapping
-    public HttpEntity<UserDto> save(@Valid @RequestBody UserDto userDto) {
+    private HttpEntity<UserDto> save(@Valid @RequestBody UserDto userDto) {
 
         User u = userDto.toUser();
         userService.save(u);
@@ -88,7 +88,7 @@ public class UsersController {
      * @return
      */
     @GetMapping(value = "/{id}")
-    public HttpEntity<UserDto> get(@PathVariable("id") int id) {
+    private HttpEntity<UserDto> get(@PathVariable("id") int id) {
         User u = userService.get(id);
         return new ResponseEntity(new UserDto(u), HttpStatus.OK);
     }
@@ -102,7 +102,7 @@ public class UsersController {
      * @return
      */
     @PutMapping(value = "/{id}")
-    public HttpEntity<UserDto> edit(@PathVariable("id") int id, @RequestBody UserDto userDto, BindingResult bindingResult) {
+    private HttpEntity<UserDto> edit(@PathVariable("id") int id, @RequestBody UserDto userDto, BindingResult bindingResult) {
         User u = userService.get(id);
 
         UserEditValidator validator = new UserEditValidator(userService);
@@ -125,7 +125,7 @@ public class UsersController {
      * @throws IOException
      */
     @RequestMapping(value = "/me", method = RequestMethod.GET)
-    public HttpEntity<UserDto> editPass(@PathVariable("id") int id, Model model, Principal logged) throws IOException {
+    private HttpEntity<UserDto> editPass(@PathVariable("id") int id, Model model, Principal logged) throws IOException {
         User u = userService.get(logged.getName());
         UserDto userDto = new UserDto(u);
         return new ResponseEntity(userDto, HttpStatus.OK);
@@ -142,7 +142,7 @@ public class UsersController {
      * @throws IOException
      */
     @PostMapping(value = "/{id}/editPass")
-    public HttpEntity<MessageDto> editPass(@PathVariable("id") int id, @RequestBody UserDto uDto,
+    private HttpEntity<MessageDto> editPass(@PathVariable("id") int id, @RequestBody UserDto uDto,
             BindingResult bindingResult, Principal logged)
             throws IOException {
 
@@ -175,7 +175,7 @@ public class UsersController {
      * @return retorna o objeto {@link MessageDto} com erro ou sucesso.
      */
     @DeleteMapping(value = "/{id}")
-    public HttpEntity<MessageDto> delete(@PathVariable("id") int id) {
+    private HttpEntity<MessageDto> delete(@PathVariable("id") int id) {
         try {
             User u = userService.get(id);
             userService.delete(u);
@@ -193,7 +193,7 @@ public class UsersController {
      * @return Lista de usuários deletados.
      */
     @GetMapping(value = "/deleted")
-    public HttpEntity<List<UserDto>> getDeleted() {
+    private HttpEntity<List<UserDto>> getDeleted() {
 
         List<User> users = userService.getDeleted();
         List<UserDto> usersDto = users.stream().map(UserDto::new).collect(toList());
@@ -208,7 +208,7 @@ public class UsersController {
      * @return
      */
     @PostMapping(value = "/{id}/activate")
-    public HttpEntity<MessageDto> activateUserDeleted(@PathVariable("id") int id) {
+    private HttpEntity<MessageDto> activateUserDeleted(@PathVariable("id") int id) {
         try {
             userService.activate(userService.get(id));
             return new ResponseEntity(new MessageDto(MessageDto.SUCCESS, "Usuário ativado com sucesso"), HttpStatus.OK);

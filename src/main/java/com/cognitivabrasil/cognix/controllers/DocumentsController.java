@@ -187,7 +187,7 @@ public class DocumentsController {
      * @return
      */
     @DeleteMapping("/{id}")
-    public HttpEntity<MessageDto> delete(@PathVariable("id") int id) {
+    private HttpEntity<MessageDto> delete(@PathVariable("id") int id) {
         MessageDto msg;
 
         log.info("Deletando o objeto: " + id);
@@ -218,7 +218,7 @@ public class DocumentsController {
     }
 
     @GetMapping("/{id}/edit")
-    public HttpEntity<DocumentDto> edit(@PathVariable("id") Integer id) throws IOException {
+    private HttpEntity<DocumentDto> edit(@PathVariable("id") Integer id) throws IOException {
         Document d = docService.get(id);
 
         //TODO: Security. Isso aqui tem que implementar depois de ter o security.
@@ -238,7 +238,7 @@ public class DocumentsController {
      * @throws IOException
      */
     @PutMapping("/{id}")
-    public HttpEntity<MessageDto> editDo(@PathVariable("id") Integer id, @RequestBody DocumentDto dto) throws IOException {
+    private HttpEntity<MessageDto> editDo(@PathVariable("id") Integer id, @RequestBody DocumentDto dto) throws IOException {
         log.debug("Editing document: {}", id);
         Document d = docService.get(id);
         //TODO: Security. Isso aqui tem que implementar depois de ter o security.
@@ -609,7 +609,7 @@ public class DocumentsController {
      * @return
      */
     @PostMapping(value = "/new/versionOf/{versionOf}", params = "versionOf")
-    public HttpEntity<DocumentDto> newVersionOf(@PathVariable Integer versionOf) {
+    private HttpEntity<DocumentDto> newVersionOf(@PathVariable Integer versionOf) {
 
         //Criação de nova versão
         Document d = docService.get(versionOf);
@@ -671,11 +671,18 @@ public class DocumentsController {
     public HttpEntity<DocumentDto> newShow(HttpServletRequest request) {
         MessageDto msg;
         Document d = new Document();
-        try{                
+        try{
+            if(request.getHeader(TokenAuthenticationService.AUTH_HEADER_NAME) == null){
+                log.error("Usuário sem token!");
+                msg = new MessageDto(MessageDto.ERROR, "O usuário não possui token.");
+                return new ResponseEntity(msg, HttpStatus.INTERNAL_SERVER_ERROR);
+            }                
             d.setCreated(new DateTime());
 
             final String token = request.getHeader(TokenAuthenticationService.AUTH_HEADER_NAME);
             final SecurityUser user = tokenHandler.parseUserFromToken(token);
+
+            log.info("Carregando documento para o usuário: " + user.getUsername());
 
             d.setOwner(userService.get(user.getUsername()));
 
@@ -823,7 +830,7 @@ public class DocumentsController {
     }
 
     @PostMapping("/{id}")
-    public HttpEntity<MessageDto> newDo(@PathVariable Integer id, @RequestBody DocumentDto dto) {
+    private HttpEntity<MessageDto> newDo(@PathVariable Integer id, @RequestBody DocumentDto dto) {
         MessageDto msg;
         try {
             Document doc = docService.get(id);
@@ -847,7 +854,7 @@ public class DocumentsController {
      * @return
      */
     @PostMapping(value = "/new/generateMetadata")
-    public HttpEntity<OBAA> generateMetadata(int id) {
+    private HttpEntity<OBAA> generateMetadata(int id) {
         Document doc = docService.get(id);
 
         return new ResponseEntity(metadataFromFile(doc), HttpStatus.OK);
@@ -862,7 +869,7 @@ public class DocumentsController {
      */
     //TODO: Para acessar este controller deve ser super usuário.
     @PostMapping("/saveFilesToDisk")
-    public HttpEntity recallFiles()
+    private HttpEntity recallFiles()
             throws IOException {
         String location = Config.FILE_PATH + "old/";
 
