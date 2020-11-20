@@ -23,7 +23,7 @@ public class Config {
     @Autowired
     private Environment env;
 
-    public static final String FILE_PATH = "/var/cognitiva/repositorio/";
+    public static final String FILE_PATH = "/var/seathings/repositorio/";
 
     public String getUrl() {
         String port = env.getProperty("repository.port", "8080");
