@@ -57,7 +57,7 @@ public class UsersController {
      *
      * @return
      */
-    @GetMapping
+    // @GetMapping
     private HttpEntity<UserDto> list() {
         List<User> l = userService.getAll();
         List<UserDto> usersDto = l.stream().map(UserDto::new).collect(toList());
@@ -87,7 +87,7 @@ public class UsersController {
      * @param id identificador do usuário que será retornado.
      * @return
      */
-    @GetMapping(value = "/{id}")
+    // @GetMapping(value = "/{id}")
     private HttpEntity<UserDto> get(@PathVariable("id") int id) {
         User u = userService.get(id);
         return new ResponseEntity(new UserDto(u), HttpStatus.OK);
@@ -101,7 +101,7 @@ public class UsersController {
      * @param bindingResult
      * @return
      */
-    @PutMapping(value = "/{id}")
+    // @PutMapping(value = "/{id}")
     private HttpEntity<UserDto> edit(@PathVariable("id") int id, @RequestBody UserDto userDto, BindingResult bindingResult) {
         User u = userService.get(id);
 
@@ -124,7 +124,7 @@ public class UsersController {
      * @return
      * @throws IOException
      */
-    @RequestMapping(value = "/me", method = RequestMethod.GET)
+    // @RequestMapping(value = "/me", method = RequestMethod.GET)
     private HttpEntity<UserDto> editPass(@PathVariable("id") int id, Model model, Principal logged) throws IOException {
         User u = userService.get(logged.getName());
         UserDto userDto = new UserDto(u);
@@ -141,7 +141,7 @@ public class UsersController {
      * @return
      * @throws IOException
      */
-    @PostMapping(value = "/{id}/editPass")
+    // @PostMapping(value = "/{id}/editPass")
     private HttpEntity<MessageDto> editPass(@PathVariable("id") int id, @RequestBody UserDto uDto,
             BindingResult bindingResult, Principal logged)
             throws IOException {
@@ -174,7 +174,7 @@ public class UsersController {
      * @param id
      * @return retorna o objeto {@link MessageDto} com erro ou sucesso.
      */
-    @DeleteMapping(value = "/{id}")
+    // @DeleteMapping(value = "/{id}")
     private HttpEntity<MessageDto> delete(@PathVariable("id") int id) {
         try {
             User u = userService.get(id);
@@ -192,7 +192,7 @@ public class UsersController {
      *
      * @return Lista de usuários deletados.
      */
-    @GetMapping(value = "/deleted")
+    // @GetMapping(value = "/deleted")
     private HttpEntity<List<UserDto>> getDeleted() {
 
         List<User> users = userService.getDeleted();
@@ -207,7 +207,7 @@ public class UsersController {
      * @param id Id do usuário desativado que deve ser ativado.
      * @return
      */
-    @PostMapping(value = "/{id}/activate")
+    // @PostMapping(value = "/{id}/activate")
     private HttpEntity<MessageDto> activateUserDeleted(@PathVariable("id") int id) {
         try {
             userService.activate(userService.get(id));

@@ -94,6 +94,9 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.bind.annotation.CrossOrigin;
+import org.springframework.mail.SimpleMailMessage;
+import org.springframework.mail.javamail.JavaMailSender;
+import org.springframework.core.env.Environment;
 
 /**
  * Document's controller to get, put and update Cognix documents.
@@ -117,7 +120,16 @@ public class DocumentsController {
     @Autowired
     private Config config;
 
+    @Autowired
+    private Environment env;
+
+    @Autowired
+    private JavaMailSender mailSender;
+
     private final Logger log = LoggerFactory.getLogger(DocumentsController.class);
+
+    private static final String RESP_SUCCESS = "{\"jsonrpc\" : \"2.0\", \"result\" : \"success\", \"id\" : \"id\"}";
+    private static final String RESP_ERROR = "{\"jsonrpc\" : \"2.0\", \"error\" : {\"code\": 101, \"message\": \"Falha ao abrir o input stream.\"}, \"id\" : \"id\"}";
 
     @ExceptionHandler(EntityNotFoundException.class)
     public ResponseEntity<MessageDto> handleException() {
@@ -144,7 +156,7 @@ public class DocumentsController {
     }
 
     /**
-     * Busca um documento pelo id. Seta o idioma do obaa para pt-BT, então os metadados serão traduzidos.
+     * Busca um documento pelo id. Seta o idioma do obaa para pt-BR, então os metadados serão traduzidos.
      *
      * @param id Identificador do documento que será buscado.
      * @return Dto com os dados do documento solicitado.
@@ -187,7 +199,7 @@ public class DocumentsController {
      * @return
      */
     @DeleteMapping("/{id}")
-    private HttpEntity<MessageDto> delete(@PathVariable("id") int id) {
+    private HttpEntity<MessageDto> delete(@PathVariable("id") int id, HttpServletRequest request) {
         MessageDto msg;
 
         log.info("Deletando o objeto: " + id);
@@ -199,11 +211,22 @@ public class DocumentsController {
                 return new ResponseEntity(msg, HttpStatus.MOVED_PERMANENTLY);
             }
 
-            //TODO: Security. Isso aqui tem que implementar depois de ter o security.
-//            if (!isManagerForThisDocument(d, request)) {
-//                msg = new MessageDto(MessageDto.ERROR, "Acesso negado! Você não ter permissão para deletar este documento.");
-//                return new ResponseEntity(msg, HttpStatus.FORBIDDEN);
-//            }
+            final String token = request.getHeader(TokenAuthenticationService.AUTH_HEADER_NAME);
+            final SecurityUser user = tokenHandler.parseUserFromToken(token);
+
+            log.info(user.getRoles().toString());
+            boolean roleChecked = false;
+            for(String role : user.getRoles()){
+                if(role.equals("tech_reviewer") || role.equals("pedag_reviewer")) {
+                    roleChecked = true;
+                }
+            }
+
+            if(!roleChecked) {
+                msg = new MessageDto(MessageDto.ERROR, "Acesso negado! Você não ter permissão para deletar este documento.");
+                return new ResponseEntity(msg, HttpStatus.FORBIDDEN);
+            }
+
             docService.delete(d);
             msg = new MessageDto(MessageDto.SUCCESS, "Documento excluido com sucesso");
         } catch (IOException io) {
@@ -217,15 +240,73 @@ public class DocumentsController {
         return new ResponseEntity(msg, HttpStatus.OK);
     }
 
-    @GetMapping("/{id}/edit")
-    private HttpEntity<DocumentDto> edit(@PathVariable("id") Integer id) throws IOException {
+    @PostMapping("/{id}/edit")
+    private HttpEntity<DocumentDto> edit(@PathVariable("id") Integer id, @RequestBody DocumentDto dto, HttpServletRequest request) throws IOException, Exception {
+        String responseString = RESP_SUCCESS;
         Document d = docService.get(id);
 
-        //TODO: Security. Isso aqui tem que implementar depois de ter o security.
-//            if (!isManagerForThisDocument(d, request)) {
-//                msg = new MessageDto(MessageDto.ERROR, "Acesso negado! Você não ter permissão para deletar este documento.");
-//                return new ResponseEntity(msg, HttpStatus.FORBIDDEN);
-//            }
+        MessageDto msg;
+        // log.info("entrei no edit, id=" + id);
+
+        try {
+            if(request.getHeader(TokenAuthenticationService.AUTH_HEADER_NAME) == null){
+                responseString = RESP_ERROR;
+                log.error("Usuário sem token!");
+                throw new Exception("Usuário sem token!");
+            }                
+    
+            final String token = request.getHeader(TokenAuthenticationService.AUTH_HEADER_NAME);
+            final SecurityUser user = tokenHandler.parseUserFromToken(token);
+
+            log.info(user.getRoles().toString());
+            boolean roleChecked = false;
+            for(String role : user.getRoles()){
+                if(role.equals("tech_reviewer") || role.equals("pedag_reviewer")) {
+                    roleChecked = true;
+                }
+            }
+
+            if(!roleChecked) {
+                msg = new MessageDto(MessageDto.ERROR, "Acesso negado! Você não ter permissão para editar este documento.");
+                return new ResponseEntity(msg, HttpStatus.FORBIDDEN);
+            }
+
+            setOBAAFiles(d, dto.getMetadata());
+
+            msg = new MessageDto(MessageDto.SUCCESS, "Documento salvo com sucesso");
+
+            SimpleMailMessage message = new SimpleMailMessage();
+
+            if(user.getRoles().toString().contains("tech_reviewer")) {
+                message.setSubject("OA submetido para revisão pedagógica");
+                message.setText("Um novo OA foi submetido: " + 
+                "\n\nTítulo: " + dto.getMetadata().getGeneral().getTitles() +
+                "\nUsuário: " + user.getUsername() + 
+                "\n\nVerifique seu perfil no EduMar!");
+                message.setTo(env.getProperty("email.pedagogical.reviewer"));
+                message.setFrom(env.getProperty("administrator.email"));
+            }
+            if(user.getRoles().toString().contains("pedag_reviewer")) {
+                message.setSubject("Seu OA está disponível no EduMar!");
+                message.setText("Comunicamos que seu OA " + 
+                dto.getMetadata().getGeneral().getTitles() +
+                " já se encontra disponível no Edumar: " +
+                "https://" + env.getProperty("repository.hostname") + "/documents/" + dto.getId());
+                message.setTo(user.getUsername());
+                message.setFrom(env.getProperty("administrator.email"));
+            }
+            
+            mailSender.send(message);
+
+        } catch(io.jsonwebtoken.SignatureException e){
+            responseString = RESP_ERROR;
+            log.error("A assinatura é inválida!");
+            throw e;
+        } catch(io.jsonwebtoken.MalformedJwtException e){
+            responseString = RESP_ERROR;
+            log.error("O token é inválido!");
+            throw e;
+        }
         return new ResponseEntity<>(new DocumentDto(d), HttpStatus.OK);
     }
 
@@ -238,16 +319,29 @@ public class DocumentsController {
      * @throws IOException
      */
     @PutMapping("/{id}")
-    private HttpEntity<MessageDto> editDo(@PathVariable("id") Integer id, @RequestBody DocumentDto dto) throws IOException {
+    private HttpEntity<MessageDto> editDo(@PathVariable("id") Integer id, @RequestBody DocumentDto dto, HttpServletRequest request) throws IOException {
         log.debug("Editing document: {}", id);
+        MessageDto msg;
         Document d = docService.get(id);
-        //TODO: Security. Isso aqui tem que implementar depois de ter o security.
-//            if (!isManagerForThisDocument(d, request)) {
-//                msg = new MessageDto(MessageDto.ERROR, "Acesso negado! Você não ter permissão para deletar este documento.");
-//                return new ResponseEntity(msg, HttpStatus.FORBIDDEN);
-//            }
+ 
+        final String token = request.getHeader(TokenAuthenticationService.AUTH_HEADER_NAME);
+        final SecurityUser user = tokenHandler.parseUserFromToken(token);
+
+        log.info(user.getRoles().toString());
+        boolean roleChecked = false;
+        for(String role : user.getRoles()){
+            if(role.equals("tech_reviewer") || role.equals("pedag_reviewer")) {
+                roleChecked = true;
+            }
+        }
+
+        if(!roleChecked) {
+            msg = new MessageDto(MessageDto.ERROR, "Acesso negado! Você não ter permissão para editar este documento.");
+            return new ResponseEntity(msg, HttpStatus.FORBIDDEN);
+        }
+
         setOBAAFiles(d, dto.getMetadata());
-        MessageDto msg = new MessageDto(MessageDto.SUCCESS, "Documento editado com sucesso");
+        msg = new MessageDto(MessageDto.SUCCESS, "Documento editado com sucesso");
         return new ResponseEntity<>(msg, HttpStatus.OK);
     }
 
@@ -324,9 +418,9 @@ public class DocumentsController {
         meta.addSchema(metaSchema);
 
         d.getMetadata().setMetametadata(meta);
-
-        //Parsing do duration
-        d.setObaaEntry(obaa.getGeneral().getIdentifiers().get(0).getEntry());
+        // log.debug("OBAA entry = " + obaa.getGeneral().getIdentifiers().get(0).getEntry());
+        // log.debug(d.getObaaEntry());
+        // d.setObaaEntry(obaa.getGeneral().getIdentifiers().get(0).getEntry());
 
         //Se o documento tem uma relação is_version_of, é testado se o outro
         //documento tem o Has_version, se não tiver a relação é criada.
@@ -609,7 +703,29 @@ public class DocumentsController {
      * @return
      */
     @PostMapping(value = "/new/versionOf/{versionOf}", params = "versionOf")
-    private HttpEntity<DocumentDto> newVersionOf(@PathVariable Integer versionOf) {
+    private HttpEntity<DocumentDto> newVersionOf(@PathVariable Integer versionOf, HttpServletRequest request) {
+        MessageDto msg;
+        if(request.getHeader(TokenAuthenticationService.AUTH_HEADER_NAME) == null){
+            log.error("Usuário sem token!");
+            msg = new MessageDto(MessageDto.ERROR, "O usuário não possui token.");
+            return new ResponseEntity(msg, HttpStatus.INTERNAL_SERVER_ERROR);
+        }                
+        
+
+        final String token = request.getHeader(TokenAuthenticationService.AUTH_HEADER_NAME);
+        final SecurityUser user = tokenHandler.parseUserFromToken(token);
+
+        boolean roleChecked = false;
+        for(String role : user.getRoles()){
+            if(role.equals("author")) {
+                roleChecked = true;
+            }
+        }
+
+        if(!roleChecked) {
+            msg = new MessageDto(MessageDto.ERROR, "Acesso negado! Você não ter permissão para enviar documentos.");
+            return new ResponseEntity(msg, HttpStatus.FORBIDDEN);
+        }
 
         //Criação de nova versão
         Document d = docService.get(versionOf);
@@ -677,10 +793,25 @@ public class DocumentsController {
                 msg = new MessageDto(MessageDto.ERROR, "O usuário não possui token.");
                 return new ResponseEntity(msg, HttpStatus.INTERNAL_SERVER_ERROR);
             }                
-            d.setCreated(new DateTime());
+            
 
             final String token = request.getHeader(TokenAuthenticationService.AUTH_HEADER_NAME);
             final SecurityUser user = tokenHandler.parseUserFromToken(token);
+
+            log.info(user.getRoles().toString());
+            boolean roleChecked = false;
+            for(String role : user.getRoles()){
+                if(role.equals("author")) {
+                    roleChecked = true;
+                }
+            }
+
+            if(!roleChecked) {
+                msg = new MessageDto(MessageDto.ERROR, "Acesso negado! Você não ter permissão para enviar documentos.");
+                return new ResponseEntity(msg, HttpStatus.FORBIDDEN);
+            }
+
+            d.setCreated(new DateTime());
 
             log.info("Carregando documento para o usuário: " + user.getUsername());
 
@@ -719,6 +850,7 @@ public class DocumentsController {
             msg = new MessageDto(MessageDto.ERROR, "O usuário não foi encontrado através do token.");
             return new ResponseEntity(msg, HttpStatus.INTERNAL_SERVER_ERROR);
         }
+
         return new ResponseEntity(new DocumentDto(d), HttpStatus.OK);
     }
 
@@ -830,19 +962,54 @@ public class DocumentsController {
     }
 
     @PostMapping("/{id}")
-    private HttpEntity<MessageDto> newDo(@PathVariable Integer id, @RequestBody DocumentDto dto) {
+    private HttpEntity<MessageDto> newDo(@PathVariable Integer id, @RequestBody DocumentDto dto, HttpServletRequest request) {
         MessageDto msg;
-        try {
-            Document doc = docService.get(id);
+        try {            
+            if(request.getHeader(TokenAuthenticationService.AUTH_HEADER_NAME) == null){
+                log.error("Usuário sem token!");
+                msg = new MessageDto(MessageDto.ERROR, "O usuário não possui token.");
+                return new ResponseEntity(msg, HttpStatus.INTERNAL_SERVER_ERROR);
+            }                
+            
+            final String token = request.getHeader(TokenAuthenticationService.AUTH_HEADER_NAME);
+            final SecurityUser user = tokenHandler.parseUserFromToken(token);
 
-            //TODO: pegar aqui o email do usuário logado.
-//        doc.setOwner(UsersController.getCurrentUser());
+            log.info(user.getRoles().toString());
+            boolean roleChecked = false;
+            for(String role : user.getRoles()){
+                if(role.equals("author")) {
+                    roleChecked = true;
+                }
+            }
+
+            Document doc = docService.get(id);
+            
+            log.info("Salvando documento...");
+            //TODO: pegar aqui o email do usuário logado? Já foi pego no new
+            //doc.setOwner(UsersController.getCurrentUser());
             setOBAAFiles(doc, dto.getMetadata());
+
+            SimpleMailMessage message = new SimpleMailMessage();
+            message.setSubject("OA submetido para revisão técnica");
+            message.setText("Um novo OA foi submetido: " + 
+            "\n\nTítulo: " + dto.getMetadata().getGeneral().getTitles() +
+            "\nUsuário: " + user.getUsername() + 
+            "\n\nVerifique seu perfil no EduMar!");
+            message.setTo(env.getProperty("email.technical.reviewer"));
+            message.setFrom(env.getProperty("administrator.email"));
+            
+            mailSender.send(message);
 
             msg = new MessageDto(MessageDto.SUCCESS, "Documento salvo com sucesso");
         } catch (DataAccessException e) {
             log.error("Não foi possivel salvar o documento.", e);
             msg = new MessageDto(MessageDto.ERROR, "Erro ao salvar o documento.", "");
+        } catch(io.jsonwebtoken.SignatureException e){
+            log.error("A assinatura do token é inválida.", e);
+            msg = new MessageDto(MessageDto.ERROR, "A assinatura é inválida!");
+        } catch(io.jsonwebtoken.MalformedJwtException e){
+            log.error("O token é inválido.", e);
+            msg = new MessageDto(MessageDto.ERROR, "O token é inválido!");
         }
         return new ResponseEntity(msg, HttpStatus.OK);
     }
@@ -868,7 +1035,7 @@ public class DocumentsController {
      * @throws Exception
      */
     //TODO: Para acessar este controller deve ser super usuário.
-    @PostMapping("/saveFilesToDisk")
+    // @PostMapping("/saveFilesToDisk")
     private HttpEntity recallFiles()
             throws IOException {
         String location = Config.FILE_PATH + "old/";

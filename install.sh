@@ -1,10 +1,10 @@
 echo "Executando o script de inicialização da base de dados..."
 echo "#Creating user..."
-sudo -u postgres psql -c "CREATE USER cognitiva WITH PASSWORD 'rep@cognitiva'"
+sudo -u postgres psql -c "CREATE USER edumar WITH PASSWORD 'teste123'"
 echo "Tentando deletar a base de dados antiga..."
 sudo -u postgres dropdb repositorio
 echo "#Criando base local..."
-sudo -u postgres createdb -E UTF8 -T template0 --locale=pt_PT.utf8 -O cognitiva repositorio
+sudo -u postgres createdb -E UTF8 -T template0 --locale=pt_PT.utf8 -O edumar repositorio
 
 echo "#Criando as tabelas..."
 sudo -u postgres psql repositorio < ./src/main/resources/schema.sql

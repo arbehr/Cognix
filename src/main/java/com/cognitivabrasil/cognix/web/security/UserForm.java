@@ -24,13 +24,13 @@ public class UserForm {
     private String name;
 
     
-   public UserForm() {
-      
-}
-    UserForm(String username,String password){
+    public UserForm() { 
+    }
+
+    UserForm(String username,String password, String name){
         this();
         this.username = username;
-
+        this.name = name;
         this.password = password;
         }
 

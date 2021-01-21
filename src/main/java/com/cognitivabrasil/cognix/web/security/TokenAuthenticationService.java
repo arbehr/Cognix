@@ -13,6 +13,7 @@ package com.cognitivabrasil.cognix.web.security;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import static org.apache.logging.log4j.util.Strings.isNotBlank;
+import java.io.UnsupportedEncodingException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -39,7 +40,7 @@ public class TokenAuthenticationService {
      * @param response HttpServletResponse onde será inserido o token.
      * @param authentication Autenticação com o usuário autorizado.
      */
-    public void addAuthentication(HttpServletResponse response, Authentication authentication) {
+    public void addAuthentication(HttpServletResponse response, Authentication authentication) throws UnsupportedEncodingException {
         final SecurityUser user = (SecurityUser) authentication.getPrincipal();
         response.addHeader(AUTH_HEADER_NAME, tokenHandler.createTokenForUser(user));
     }

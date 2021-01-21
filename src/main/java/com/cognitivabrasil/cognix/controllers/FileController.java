@@ -160,8 +160,17 @@ public class FileController {
                 final String token = request.getHeader(TokenAuthenticationService.AUTH_HEADER_NAME);
                 final SecurityUser user = tokenHandler.parseUserFromToken(token);
 
-                LOG.info("Carregando arquivo para o usuário: " + user.getUsername());
-                
+                boolean roleChecked = false;
+                for(String role : user.getRoles()){
+                    if(role.equals("author")) {
+                        roleChecked = true;
+                    }
+                }
+
+                if(!roleChecked) {
+                    msg = new MessageDto(MessageDto.ERROR, "Acesso negado! Você não ter permissão para enviar documentos.");
+                    return new ResponseEntity(msg, HttpStatus.FORBIDDEN);
+                }
                 if (!multipartFile.isEmpty()) {
                     // InputStream input = multipartFile.getInputStream();
                     Enumeration<String> parameterNames = request.getParameterNames();
