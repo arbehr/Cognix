@@ -162,7 +162,7 @@ public class FileController {
 
                 boolean roleChecked = false;
                 for(String role : user.getRoles()){
-                    if(role.equals("author")) {
+                    if(role.contains("author")) {
                         roleChecked = true;
                     }
                 }
