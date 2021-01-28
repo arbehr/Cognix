@@ -215,14 +215,10 @@ public class DocumentsController {
             final SecurityUser user = tokenHandler.parseUserFromToken(token);
 
             log.info(user.getRoles().toString());
-            boolean roleChecked = false;
-            for(String role : user.getRoles()){
-                if(role.equals("tech_reviewer") || role.equals("pedag_reviewer")) {
-                    roleChecked = true;
-                }
-            }
+            boolean roleTechChecked = checkRole(user.getRoles().toString(),"tech_reviewer");
+            boolean rolePedagChecked = checkRole(user.getRoles().toString(),"pedag_reviewer");
 
-            if(!roleChecked) {
+            if(!roleTechChecked && !rolePedagChecked) {
                 msg = new MessageDto(MessageDto.ERROR, "Acesso negado! Você não ter permissão para deletar este documento.");
                 return new ResponseEntity(msg, HttpStatus.FORBIDDEN);
             }
@@ -259,14 +255,10 @@ public class DocumentsController {
             final SecurityUser user = tokenHandler.parseUserFromToken(token);
 
             log.info(user.getRoles().toString());
-            boolean roleChecked = false;
-            for(String role : user.getRoles()){
-                if(role.equals("tech_reviewer") || role.equals("pedag_reviewer")) {
-                    roleChecked = true;
-                }
-            }
+            boolean roleTechChecked = checkRole(user.getRoles().toString(),"tech_reviewer");
+            boolean rolePedagChecked = checkRole(user.getRoles().toString(),"pedag_reviewer");
 
-            if(!roleChecked) {
+            if(!roleTechChecked && !rolePedagChecked) {
                 msg = new MessageDto(MessageDto.ERROR, "Acesso negado! Você não ter permissão para editar este documento.");
                 return new ResponseEntity(msg, HttpStatus.FORBIDDEN);
             }
@@ -328,14 +320,10 @@ public class DocumentsController {
         final SecurityUser user = tokenHandler.parseUserFromToken(token);
 
         log.info(user.getRoles().toString());
-        boolean roleChecked = false;
-        for(String role : user.getRoles()){
-            if(role.equals("tech_reviewer") || role.equals("pedag_reviewer")) {
-                roleChecked = true;
-            }
-        }
+        boolean roleTechChecked = checkRole(user.getRoles().toString(),"tech_reviewer");
+        boolean rolePedagChecked = checkRole(user.getRoles().toString(),"pedag_reviewer");
 
-        if(!roleChecked) {
+        if(!roleTechChecked && !rolePedagChecked) {
             msg = new MessageDto(MessageDto.ERROR, "Acesso negado! Você não ter permissão para editar este documento.");
             return new ResponseEntity(msg, HttpStatus.FORBIDDEN);
         }
@@ -715,12 +703,7 @@ public class DocumentsController {
         final String token = request.getHeader(TokenAuthenticationService.AUTH_HEADER_NAME);
         final SecurityUser user = tokenHandler.parseUserFromToken(token);
 
-        boolean roleChecked = false;
-        for(String role : user.getRoles()){
-            if(role.equals("author")) {
-                roleChecked = true;
-            }
-        }
+        boolean roleChecked = checkRole(user.getRoles().toString(),"author");
 
         if(!roleChecked) {
             msg = new MessageDto(MessageDto.ERROR, "Acesso negado! Você não ter permissão para enviar documentos.");
@@ -799,12 +782,7 @@ public class DocumentsController {
             final SecurityUser user = tokenHandler.parseUserFromToken(token);
 
             log.info(user.getRoles().toString());
-            boolean roleChecked = false;
-            for(String role : user.getRoles()){
-                if(role.equals("author")) {
-                    roleChecked = true;
-                }
-            }
+            boolean roleChecked = checkRole(user.getRoles().toString(),"author");
 
             if(!roleChecked) {
                 msg = new MessageDto(MessageDto.ERROR, "Acesso negado! Você não ter permissão para enviar documentos.");
@@ -975,12 +953,7 @@ public class DocumentsController {
             final SecurityUser user = tokenHandler.parseUserFromToken(token);
 
             log.info(user.getRoles().toString());
-            boolean roleChecked = false;
-            for(String role : user.getRoles()){
-                if(role.equals("author")) {
-                    roleChecked = true;
-                }
-            }
+            boolean roleChecked = checkRole(user.getRoles().toString(),"author");
 
             Document doc = docService.get(id);
             
@@ -1066,6 +1039,16 @@ public class DocumentsController {
             }
         }
         return new ResponseEntity(HttpStatus.OK);
+    }
+
+    private boolean checkRole(String roles, String roleToCheck){
+        boolean roleChecked = false;
+        for(String role : roles.split(",")){
+            if(role.contains(roleToCheck)) {
+                roleChecked = true;
+            }
+        }
+        return roleChecked;
     }
 
 }

@@ -27,6 +27,8 @@ public class EmailController {
 
     @RequestMapping(path = "/email-send", method = RequestMethod.POST, produces = MediaType.APPLICATION_JSON_VALUE)
     public ResponseEntity sendMail(@RequestBody Email form) {
+        //TODO: require token to send email
+        
         SimpleMailMessage message = new SimpleMailMessage();
         message.setSubject("Edumar - dúvidas, sugestões e/ou comentários");
         message.setText("Nome: " + form.getName() + 

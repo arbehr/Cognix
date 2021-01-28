@@ -6,10 +6,11 @@ import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.boot.web.servlet.ServletRegistrationBean;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.ComponentScan;
+import org.springframework.boot.web.servlet.support.SpringBootServletInitializer;
 
 @ComponentScan(basePackages = "com.cognitivabrasil.cognix")
 @SpringBootApplication
-public class CognixApplication {
+public class CognixApplication extends SpringBootServletInitializer {
 
     public static void main(String[] args) {
         SpringApplication.run(CognixApplication.class, args);
