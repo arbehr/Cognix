@@ -279,8 +279,8 @@ public class DocumentsController {
                 message.setFrom(env.getProperty("administrator.email"));
             }
             if(user.getRoles().toString().contains("pedag_reviewer")) {
-                message.setSubject("Seu OA está disponível no EduMar!");
-                message.setText("Comunicamos que seu OA " + 
+                message.setSubject("Seu objeto de aprendizagem está disponível no EduMar!");
+                message.setText("Comunicamos que seu objeto " + 
                 dto.getMetadata().getGeneral().getTitles() +
                 " já se encontra disponível no Edumar: " +
                 "https://" + env.getProperty("repository.hostname") + "/documents/" + dto.getId());
