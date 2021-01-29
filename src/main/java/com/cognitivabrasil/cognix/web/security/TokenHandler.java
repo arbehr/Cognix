@@ -71,6 +71,7 @@ public class TokenHandler {
                 .setIssuer("edumar.uac.pt")
                 .setAudience("Solr")
                 .claim("roles", user.getRoles())
+                .claim("name", user.getName())
                 .signWith(SignatureAlgorithm.HS256, decodedSecret)
                 .compact();
     }

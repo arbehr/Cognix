@@ -28,6 +28,7 @@ public class SecurityUser extends LoginUser implements UserDetails {
 
     private boolean enabled = true;
     private List<String> roles;
+    private String name;
 
     private final Logger log = LoggerFactory.getLogger(SecurityUser.class);
 
@@ -41,6 +42,7 @@ public class SecurityUser extends LoginUser implements UserDetails {
         listRole.add(user.getRole());
         this.roles = listRole;
         this.enabled = true;
+        this.name = user.getName();
     }
 
     public SecurityUser(String email, List<String> roles) {
@@ -85,7 +87,9 @@ public class SecurityUser extends LoginUser implements UserDetails {
         return roles;
     }
 
-
+    public String getName() {
+        return name;
+    }
 
 
 }
