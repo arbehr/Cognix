@@ -84,8 +84,8 @@ public class SignUpController {
         }
 
         SimpleMailMessage message = new SimpleMailMessage();  
-        message.setSubject("EduMar - Novo usuário cadastrado");
-        message.setText("Dados de novo usuário no EduMar: " + 
+        message.setSubject("Re-Mar - Novo usuário cadastrado");
+        message.setText("Dados de novo usuário no Re-Mar: " + 
         "\n\nNome: " + form.getName() +
         "\nUsuário: " + form.getUsername());
         message.setTo(env.getProperty("administrator.email"));

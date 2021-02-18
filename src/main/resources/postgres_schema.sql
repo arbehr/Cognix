@@ -7,7 +7,7 @@ INSERT INTO users (login, password, name, permissions, role)
 INSERT INTO users (login, password, name, permissions, role)
     VALUES ('anonymous@uac.pt', md5('anonymous'), 'Usuário anônimo', '', 'reader');
 
-ALTER TABLE documents OWNER TO edumar;
-ALTER TABLE files OWNER TO edumar;
-ALTER TABLE users OWNER TO edumar;
-ALTER TABLE subject OWNER TO edumar;
+ALTER TABLE documents OWNER TO re-mar;
+ALTER TABLE files OWNER TO re-mar;
+ALTER TABLE users OWNER TO re-mar;
+ALTER TABLE subject OWNER TO re-mar;

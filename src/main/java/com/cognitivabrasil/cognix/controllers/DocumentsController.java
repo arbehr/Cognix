@@ -274,15 +274,15 @@ public class DocumentsController {
                 message.setText("Um novo OA foi submetido: " + 
                 "\n\nTítulo: " + dto.getMetadata().getGeneral().getTitles() +
                 "\nUsuário: " + user.getUsername() + 
-                "\n\nVerifique seu perfil no EduMar!");
+                "\n\nVerifique seu perfil no Re-Mar!");
                 message.setTo(env.getProperty("email.pedagogical.reviewer"));
                 message.setFrom(env.getProperty("administrator.email"));
             }
             if(user.getRoles().toString().contains("pedag_reviewer")) {
-                message.setSubject("Seu objeto de aprendizagem está disponível no EduMar!");
+                message.setSubject("Seu objeto de aprendizagem está disponível no Re-Mar!");
                 message.setText("Comunicamos que seu objeto " + 
                 dto.getMetadata().getGeneral().getTitles() +
-                " já se encontra disponível no Edumar: " +
+                " já se encontra disponível no Re-Mar: " +
                 "https://" + env.getProperty("repository.hostname") + "/documents/" + dto.getId());
                 message.setTo(user.getUsername());
                 message.setFrom(env.getProperty("administrator.email"));
@@ -967,7 +967,7 @@ public class DocumentsController {
             message.setText("Um novo OA foi submetido: " + 
             "\n\nTítulo: " + dto.getMetadata().getGeneral().getTitles() +
             "\nUsuário: " + user.getUsername() + 
-            "\n\nVerifique seu perfil no EduMar!");
+            "\n\nVerifique seu perfil no Re-Mar!");
             message.setTo(env.getProperty("email.technical.reviewer"));
             message.setFrom(env.getProperty("administrator.email"));
             

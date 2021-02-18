@@ -30,7 +30,7 @@ public class EmailController {
         //TODO: require token to send email
         
         SimpleMailMessage message = new SimpleMailMessage();
-        message.setSubject("Edumar - dúvidas, sugestões e/ou comentários");
+        message.setSubject("Re-Mar - dúvidas, sugestões e/ou comentários");
         message.setText("Nome: " + form.getName() + 
         "\nEmail: " + form.getEmail() + "\nIP: " + form.getIP() + 
         "\n\nMensagem: \n\n" + form.getMessage());
