@@ -33,7 +33,7 @@ public class SolrServiceImpl implements SolrService {
     private static final Logger log = LoggerFactory.getLogger(SolrServiceImpl.class);
 
     private String getSolrToken(){
-        SecurityUser securityUser = new SecurityUser(userService.get("admin"));
+        SecurityUser securityUser = new SecurityUser(userService.get("admin@uac.pt"));
         try {
             String token = tokenHandler.createTokenForUser(securityUser);
             return token;
