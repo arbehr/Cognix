@@ -68,7 +68,7 @@ public class TokenHandler {
                 .setHeader(map)
                 .setSubject(user.getUsername())
                 .setExpiration(expirationDate)
-                .setIssuer("edumar.uac.pt")
+                .setIssuer("re-mar.uac.pt")
                 .setAudience("Solr")
                 .claim("roles", user.getRoles())
                 .claim("name", user.getName())
