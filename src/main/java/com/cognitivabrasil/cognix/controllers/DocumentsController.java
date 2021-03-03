@@ -265,8 +265,7 @@ public class DocumentsController {
         boolean firstEdit = false;
         MessageDto msg;
         // log.info("entrei no edit, id=" + id);
-        if(d == null || d.getMetadata().getGeneral().getTitles() == null || 
-           d.getMetadata().getGeneral().getTitles().isEmpty()) {
+        if(d == null) {
             firstEdit = true;
         }
         // log.info(dto.getMetadata().getGeneral());
