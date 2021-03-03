@@ -169,6 +169,28 @@ public class DocumentsController {
             return new ResponseEntity<>(HttpStatus.MOVED_PERMANENTLY);
         }
         d.getMetadata().setLocale("pt-BR");
+        // check if it is for edition
+        if(d.getTitle() == null) {
+            OBAA obaa = new OBAA();
+
+            obaa.setGeneral(new General());
+            obaa.setLifeCycle(new LifeCycle());
+            obaa.setEducational(new Educational());
+            obaa.setRights(new Rights());
+
+            List<Identifier> identifiers = new ArrayList<>();
+            Identifier i = new Identifier();
+
+            String uri = createUri(d);
+            d.setObaaEntry(uri);
+            i.setEntry(uri);
+            i.setCatalog("URI");
+
+            identifiers.add(i);
+            obaa.getGeneral().setIdentifiers(identifiers);
+
+            d.setMetadata(obaa);
+        }
         DocumentDto dto = new DocumentDto(d);
         //mostrar a relação para o usuário
         if (d.getMetadata() != null && !d.getMetadata().getRelations().isEmpty()) {
@@ -240,10 +262,15 @@ public class DocumentsController {
     private HttpEntity<DocumentDto> edit(@PathVariable("id") Integer id, @RequestBody DocumentDto dto, HttpServletRequest request) throws IOException, Exception {
         String responseString = RESP_SUCCESS;
         Document d = docService.get(id);
-
+        boolean firstEdit = false;
         MessageDto msg;
         // log.info("entrei no edit, id=" + id);
-
+        if(d == null || d.getMetadata().getGeneral().getTitles() == null || 
+           d.getMetadata().getGeneral().getTitles().isEmpty()) {
+            firstEdit = true;
+        }
+        // log.info(dto.getMetadata().getGeneral());
+        
         try {
             if(request.getHeader(TokenAuthenticationService.AUTH_HEADER_NAME) == null){
                 responseString = RESP_ERROR;
@@ -257,8 +284,9 @@ public class DocumentsController {
             log.info(user.getRoles().toString());
             boolean roleTechChecked = checkRole(user.getRoles().toString(),"tech_reviewer");
             boolean rolePedagChecked = checkRole(user.getRoles().toString(),"pedag_reviewer");
+            boolean roleAuthorChecked = checkRole(user.getRoles().toString(),"author");
 
-            if(!roleTechChecked && !rolePedagChecked) {
+            if(!roleTechChecked && !rolePedagChecked && !roleAuthorChecked) {
                 msg = new MessageDto(MessageDto.ERROR, "Acesso negado! Você não ter permissão para editar este documento.");
                 return new ResponseEntity(msg, HttpStatus.FORBIDDEN);
             }
@@ -269,7 +297,7 @@ public class DocumentsController {
 
             SimpleMailMessage message = new SimpleMailMessage();
 
-            if(user.getRoles().toString().contains("tech_reviewer")) {
+            if(roleTechChecked && !firstEdit) {
                 message.setSubject("OA submetido para revisão pedagógica");
                 message.setText("Um novo OA foi submetido: " + 
                 "\n\nTítulo: " + dto.getMetadata().getGeneral().getTitles() +
@@ -278,12 +306,12 @@ public class DocumentsController {
                 message.setTo(env.getProperty("email.pedagogical.reviewer"));
                 message.setFrom(env.getProperty("administrator.email"));
             }
-            if(user.getRoles().toString().contains("pedag_reviewer")) {
+            if(rolePedagChecked && !firstEdit) {
                 message.setSubject("Seu objeto de aprendizagem está disponível no Re-Mar!");
                 message.setText("Comunicamos que seu objeto " + 
                 dto.getMetadata().getGeneral().getTitles() +
                 " já se encontra disponível no Re-Mar: " +
-                "https://" + env.getProperty("repository.hostname") + "/documents/" + dto.getId());
+                "http://" + env.getProperty("repository.hostname") + "/documents/" + dto.getId());
                 message.setTo(user.getUsername());
                 message.setFrom(env.getProperty("administrator.email"));
             }
@@ -299,7 +327,8 @@ public class DocumentsController {
             log.error("O token é inválido!");
             throw e;
         }
-        return new ResponseEntity<>(new DocumentDto(d), HttpStatus.OK);
+        return new ResponseEntity(dto, HttpStatus.OK);
+        //return new ResponseEntity<>(new DocumentDto(d), HttpStatus.OK);
     }
 
     /**
@@ -362,12 +391,14 @@ public class DocumentsController {
         // somatorio to tamanho de todos os arquivos
         t.setSize(new Size(size));
         obaa.setTechnical(t);
+
         d.setMetadata(obaa);
 
         if (obaa.getTechnical() == null) {
             log.warn("Technical was null");
             obaa.setTechnical(new Technical());
         }
+
         List<Location> l = obaa.getTechnical().getLocation();
 
         //if doesn't have location, an entry based is created
